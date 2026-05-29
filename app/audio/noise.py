@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import BytesIO
+from pathlib import Path
+import subprocess
 import wave
 
 import numpy as np
@@ -56,9 +58,59 @@ def read_wav_bytes(content: bytes) -> tuple[np.ndarray, int, float]:
     return samples, sample_rate, duration
 
 
+def _read_with_ffmpeg(content: bytes, filename: str) -> tuple[np.ndarray, int, float]:
+    """Read compressed audio formats through the bundled ffmpeg binary."""
+    try:
+        import imageio_ffmpeg
+    except ImportError as exc:
+        raise ValueError(
+            "Format audio compresse non disponible. Installe les dependances avec: pip install -r requirements.txt"
+        ) from exc
+
+    sample_rate = 44100
+    command = [
+        imageio_ffmpeg.get_ffmpeg_exe(),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        "pipe:0",
+        "-f",
+        "f32le",
+        "-acodec",
+        "pcm_f32le",
+        "-ac",
+        "1",
+        "-ar",
+        str(sample_rate),
+        "pipe:1",
+    ]
+    try:
+        completed = subprocess.run(command, input=content, capture_output=True, check=True)
+    except Exception as exc:
+        raise ValueError(
+            "Lecture audio impossible. Verifie que le fichier est valide et que ffmpeg est disponible pour MP3/M4A/OGG/FLAC."
+        ) from exc
+
+    samples = np.frombuffer(completed.stdout, dtype=np.float32)
+    duration = len(samples) / sample_rate if sample_rate else 0.0
+    return samples, sample_rate, duration
+
+
+def read_audio_bytes(content: bytes, filename: str = "audio.wav") -> tuple[np.ndarray, int, float]:
+    """Read WAV directly and compressed formats through optional ffmpeg support."""
+    suffix = Path(filename).suffix.lower()
+    if suffix in {"", ".wav"}:
+        try:
+            return read_wav_bytes(content)
+        except wave.Error:
+            return _read_with_ffmpeg(content, filename)
+    return _read_with_ffmpeg(content, filename)
+
+
 def analyze_noise(content: bytes, filename: str) -> NoiseAnalysis:
-    """Analyze classroom background noise from a WAV audio sample."""
-    samples, sample_rate, duration = read_wav_bytes(content)
+    """Analyze classroom background noise from an audio sample."""
+    samples, sample_rate, duration = read_audio_bytes(content, filename)
     if samples.size == 0 or sample_rate <= 0:
         raise ValueError("Audio vide ou invalide.")
 
@@ -115,9 +167,9 @@ def analysis_to_dataframe(result: NoiseAnalysis) -> pd.DataFrame:
     return pd.DataFrame([result.__dict__])
 
 
-def waveform_preview(content: bytes, max_points: int = 900) -> pd.DataFrame:
+def waveform_preview(content: bytes, filename: str = "audio.wav", max_points: int = 900) -> pd.DataFrame:
     """Return a downsampled waveform dataframe."""
-    samples, sample_rate, _ = read_wav_bytes(content)
+    samples, sample_rate, _ = read_audio_bytes(content, filename)
     if samples.size > max_points:
         idx = np.linspace(0, samples.size - 1, max_points).astype(int)
         samples = samples[idx]

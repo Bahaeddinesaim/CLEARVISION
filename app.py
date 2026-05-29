@@ -80,13 +80,26 @@ def bootstrap_state() -> None:
         persist_all({**st.session_state["datasets"], "data_catalog": st.session_state["catalog"]})
 
 
-def save_uploaded_file(file) -> tuple[str, Path]:
-    """Persist the uploaded image and return its analysis identifier."""
-    ext = Path(file.name).suffix.lower() or ".jpg"
+def save_uploaded_file(file, default_ext: str = ".jpg") -> tuple[str, Path]:
+    """Persist the uploaded image/camera capture and return its analysis identifier."""
+    filename = getattr(file, "name", "") or f"capture{default_ext}"
+    ext = Path(filename).suffix.lower() or default_ext
     analysis_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid4().hex[:8]
     image_path = DATA_DIR / "raw" / "uploads" / f"{analysis_id}{ext}"
     image_path.write_bytes(file.getbuffer())
     return analysis_id, image_path
+
+
+def audio_mime(filename: str) -> str:
+    """Return a browser audio MIME type from a filename."""
+    suffix = Path(filename).suffix.lower()
+    return {
+        ".mp3": "audio/mpeg",
+        ".m4a": "audio/mp4",
+        ".ogg": "audio/ogg",
+        ".flac": "audio/flac",
+        ".wav": "audio/wav",
+    }.get(suffix, "audio/wav")
 
 
 def register_image(analysis_id: str, image_path: Path, annotated_path: str, detections_count: int) -> pd.DataFrame:
@@ -288,9 +301,15 @@ elif page == "Detection Studio":
     with r3:
         kpi("Equipements requis", ("TV + Projecteur" if rules["tv_required"] and rules["projector_required"] else "Personnalise"), "regles salle", "OK")
 
-    file = st.file_uploader("Photo de salle de classe", type=["jpg", "jpeg", "png", "webp"])
-    if file:
-        analysis_id, image_path = save_uploaded_file(file)
+    upload_tab, camera_tab = st.tabs(["Importer", "Camera"])
+    with upload_tab:
+        uploaded_photo = st.file_uploader("Photo de salle de classe", type=["jpg", "jpeg", "png", "webp"])
+    with camera_tab:
+        captured_photo = st.camera_input("Prendre une photo avec l'appareil photo")
+
+    image_file = captured_photo or uploaded_photo
+    if image_file:
+        analysis_id, image_path = save_uploaded_file(image_file)
         with st.spinner("Analyse IA, anomalies et pipeline data en cours..."):
             new_raw, annotated_path = detect_objects(image_path, float(rules["min_confidence"]))
             annotated_target = DATA_DIR / "raw" / "annotated" / f"annotated_{image_path.name}"
@@ -343,24 +362,34 @@ elif page == "Detection Studio":
             )
         st.download_button("Telecharger raw_detections.csv", results["raw"].to_csv(index=False).encode("utf-8"), "raw_detections.csv")
     else:
-        card("Pret pour l'analyse", "La photo originale, l'image annotee, les CSV, SQLite et le catalogue seront mis a jour sans supprimer l'historique.")
+        card("Pret pour l'analyse", "Importe une photo ou prends une capture camera. L'image originale, l'image annotee, les CSV, SQLite et le catalogue seront mis a jour sans supprimer l'historique.")
 
 elif page == "Audio Noise Detection":
     section("Audio Noise Detection", "Analyse du bruit ambiant par traitement du signal. Le fichier audio est traite en memoire et n'est pas sauvegarde.")
     a1, a2, a3 = st.columns(3)
     with a1:
-        kpi("Formats", "WAV", "PCM 8/16/32 bits", "A")
+        kpi("Formats", "WAV/MP3+", "upload ou micro", "A")
     with a2:
         kpi("Mode", "In-memory", "aucune sauvegarde audio", "M")
     with a3:
         kpi("Decision", "Low/Medium/High", "score de bruit", "N")
 
-    audio_file = st.file_uploader("Importer un enregistrement audio de la classe", type=["wav"])
+    audio_upload_tab, audio_record_tab = st.tabs(["Importer", "Micro"])
+    with audio_upload_tab:
+        uploaded_audio = st.file_uploader(
+            "Importer un enregistrement audio de la classe",
+            type=["wav", "mp3", "m4a", "ogg", "flac"],
+        )
+    with audio_record_tab:
+        recorded_audio = st.audio_input("Enregistrer avec le micro")
+
+    audio_file = recorded_audio or uploaded_audio
     if audio_file:
         audio_bytes = audio_file.getvalue()
-        st.audio(audio_bytes, format="audio/wav")
+        audio_name = getattr(audio_file, "name", "") or "microphone.wav"
+        st.audio(audio_bytes, format=audio_mime(audio_name))
         try:
-            result = analyze_noise(audio_bytes, audio_file.name)
+            result = analyze_noise(audio_bytes, audio_name)
             result_df = analysis_to_dataframe(result)
             n1, n2, n3, n4 = st.columns(4)
             with n1:
@@ -373,7 +402,7 @@ elif page == "Audio Noise Detection":
                 kpi("Duree", f"{result.duration_seconds:.1f}s", f"{result.sample_rate} Hz", "T")
 
             card("Recommendation audio", result.recommendation)
-            wave_df = waveform_preview(audio_bytes)
+            wave_df = waveform_preview(audio_bytes, audio_name)
             fig = px.line(wave_df, x="time_seconds", y="amplitude", title="Waveform preview")
             fig.update_layout(height=320, margin=dict(t=55, b=20, l=20, r=20))
             st.plotly_chart(fig, use_container_width=True)
@@ -385,9 +414,9 @@ elif page == "Audio Noise Detection":
             )
         except Exception as exc:
             st.error(f"Analyse audio impossible: {exc}")
-            st.info("Utilise un fichier WAV PCM classique. Les MP3/M4A ne sont pas analyses sans dependance audio supplementaire.")
+            st.info("Pour MP3/M4A/OGG/FLAC, installe les dependances du requirements.txt afin d'activer le decodeur ffmpeg.")
     else:
-        card("Comment l'utiliser", "Enregistre 5 a 30 secondes dans la classe, exporte en WAV, puis importe le fichier ici. L'app estime si le bruit ambiant est faible, moyen ou eleve.")
+        card("Comment l'utiliser", "Importe un fichier audio ou enregistre 5 a 30 secondes avec le micro. L'app estime si le bruit ambiant est faible, moyen ou eleve.")
 
 elif page == "Inventory Analytics":
     section("Inventory Analytics", "Comptage, conformite et ecarts par objet.")

@@ -7,3 +7,4 @@ opencv-python-headless==4.10.0.84
 Pillow==11.0.0
 pyyaml==6.0.2
 faker==33.1.0
+imageio-ffmpeg==0.5.1
