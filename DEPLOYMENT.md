@@ -67,7 +67,9 @@ This usually means the app is still building or installing dependencies. If it s
 4. Confirm the branch is `main`.
 5. Reboot the app after pushing a lighter `requirements.txt`.
 
-This repository now uses a lightweight `requirements.txt` for cloud deployment and `requirements-local-optional.txt` for heavier local-only packages.
+This repository now uses a lightweight `requirements.txt` for cloud deployment. Heavier local-only packages are documented in `README.md` but are not kept in a separate requirements file, because Streamlit Cloud may detect and process extra dependency files.
+
+Also deploy with Python 3.12 in Streamlit Cloud Advanced settings. Python 3.14 can break older transitive dependencies such as `htmlmin` because the standard library module `cgi` is no longer available.
 
 ## GitHub Pages
 

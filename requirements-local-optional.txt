@@ -1,9 +1,0 @@
-# Optional local-only dependencies.
-# Install these when you want real YOLO inference or heavy profiling locally.
-
-ultralytics==8.3.49
-SQLAlchemy==2.0.36
-ydata-profiling==4.12.0
-sweetviz==2.3.1
-python-dotenv==1.0.1
-rich==13.9.4
