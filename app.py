@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+import os
 import shutil
 from uuid import uuid4
 
@@ -10,8 +11,9 @@ from PIL import Image
 import plotly.express as px
 import streamlit as st
 
-from app.core.settings import DATA_DIR, ensure_directories
+from app.core.settings import DATA_DIR, ensure_directories, load_env_file
 from app.audio.noise import analysis_to_dataframe, analyze_noise, waveform_preview
+from app.assistant.groq_agent import DEFAULT_GEMINI_MODEL, answer_locally, answer_with_gemini, build_classvision_context
 from app.dashboards.charts import anomalies_pie, data_quality_bar, history_line, inventory_bar, score_gauge
 from app.data.database import init_db, persist_all
 from app.data.pipeline import DEFAULT_CLASSROOM_RULES, build_photo_gold, load_current_datasets, run_medallion_pipeline
@@ -28,6 +30,7 @@ PAGES = [
     "Detection Studio",
     "Audio Noise Detection",
     "Prediction Meteo",
+    "Assistant IA",
     "Inventory Analytics",
     "Anomaly Center",
     "Governance Center",
@@ -39,6 +42,7 @@ PAGES = [
 
 st.set_page_config(page_title="ClassVision AI", page_icon="CV", layout="wide", initial_sidebar_state="expanded")
 st.markdown(PREMIUM_CSS, unsafe_allow_html=True)
+load_env_file()
 ensure_directories()
 init_db()
 
@@ -509,6 +513,84 @@ elif page == "Prediction Meteo":
     except Exception as exc:
         st.error(f"Prediction meteo indisponible: {exc}")
         st.info("Verifie la connexion internet du serveur Streamlit. Open-Meteo ne demande pas de cle API.")
+
+elif page == "Assistant IA":
+    section("Assistant IA", "Pose des questions sur l'etat de l'application, les analyses, anomalies, meteo et decisions operationnelles.")
+    if "assistant_messages" not in st.session_state:
+        st.session_state["assistant_messages"] = [
+            {
+                "role": "assistant",
+                "content": "Bonjour. Je peux resumer la derniere analyse, expliquer les anomalies, lire la meteo et proposer une action.",
+            }
+        ]
+
+    env_gemini_key = os.getenv("GEMINI_API_KEY", "")
+    with st.expander("Configuration Gemini", expanded=not bool(env_gemini_key)):
+        typed_gemini_key = st.text_input(
+            "Cle API Gemini",
+            value="",
+            type="password",
+            placeholder="Colle ta cle ici si GEMINI_API_KEY n'est pas configuree",
+        )
+        st.caption("La cle saisie ici reste en memoire de session Streamlit et n'est pas ecrite dans le projet.")
+
+    gemini_key = typed_gemini_key or env_gemini_key
+    gemini_model = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    weather_context = {}
+    try:
+        weather_context = current_summary(cached_weather_forecast())
+    except Exception:
+        weather_context = {"status": "meteo indisponible"}
+    app_context = build_classvision_context(datasets, rules, score, profile, weather_context)
+
+    quick1, quick2, quick3, quick4 = st.columns(4)
+    quick_prompts = {
+        "resume": "Resume la derniere situation de la classe.",
+        "anomalies": "Quelles anomalies sont les plus importantes ?",
+        "meteo": "Dois-je allumer la climatisation ou le chauffage ?",
+        "actions": "Quelles actions prioritaires recommandes-tu maintenant ?",
+    }
+    with quick1:
+        if st.button("Resume"):
+            st.session_state["assistant_pending"] = quick_prompts["resume"]
+    with quick2:
+        if st.button("Anomalies"):
+            st.session_state["assistant_pending"] = quick_prompts["anomalies"]
+    with quick3:
+        if st.button("Meteo"):
+            st.session_state["assistant_pending"] = quick_prompts["meteo"]
+    with quick4:
+        if st.button("Actions"):
+            st.session_state["assistant_pending"] = quick_prompts["actions"]
+
+    for message in st.session_state["assistant_messages"]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    prompt = st.chat_input("Demande quelque chose a propos de ClassVision")
+    pending_prompt = st.session_state.pop("assistant_pending", None)
+    user_prompt = pending_prompt or prompt
+    if user_prompt:
+        st.session_state["assistant_messages"].append({"role": "user", "content": user_prompt})
+        with st.chat_message("user"):
+            st.markdown(user_prompt)
+        if not gemini_key:
+            answer = "Ajoute une cle Gemini dans la configuration de cette page ou configure GEMINI_API_KEY dans .env."
+        else:
+            chat_history = [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in st.session_state["assistant_messages"]
+                if msg["role"] in {"user", "assistant"}
+            ]
+            try:
+                with st.spinner("L'agent analyse les donnees de l'application..."):
+                    answer = answer_with_gemini(gemini_key, user_prompt, app_context, chat_history, model=gemini_model)
+            except Exception as exc:
+                fallback = answer_locally(user_prompt, app_context)
+                answer = f"Gemini est indisponible: {exc}\n\nMode local:\n\n{fallback}"
+        st.session_state["assistant_messages"].append({"role": "assistant", "content": answer})
+        with st.chat_message("assistant"):
+            st.markdown(answer)
 
 elif page == "Inventory Analytics":
     section("Inventory Analytics", "Comptage, conformite et ecarts par objet.")
