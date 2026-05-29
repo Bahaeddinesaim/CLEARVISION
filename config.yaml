@@ -1,0 +1,31 @@
+project:
+  name: ClassVision AI
+  version: 1.0.0
+  environment: local
+vision:
+  yolo_model: yolo11n.pt
+  confidence_threshold: 0.25
+  classroom_classes:
+    table: [dining table]
+    chair: [chair]
+    tv: [tv]
+    laptop: [laptop]
+    pc: [laptop]
+    person: [person]
+    bottle: [bottle]
+quality_rules:
+  required_objects:
+    tableau: 1
+    porte: 1
+    fenetre: 1
+  recommended_objects:
+    table: 6
+    chaise: 12
+    tv: 1
+    pc: 3
+    poubelle: 1
+score_weights:
+  detection_quality: 0.25
+  anomaly_penalty: 0.35
+  inventory_compliance: 0.25
+  data_quality: 0.15

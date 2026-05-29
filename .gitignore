@@ -1,0 +1,42 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Streamlit secrets must stay local.
+.streamlit/secrets.toml
+
+# Local user data and generated warehouse outputs.
+data/**
+!data/.gitkeep
+!data/raw/.gitkeep
+!data/raw/uploads/.gitkeep
+!data/raw/annotated/.gitkeep
+!data/bronze/.gitkeep
+!data/silver/.gitkeep
+!data/gold/.gitkeep
+!data/catalog/.gitkeep
+!data/reports/.gitkeep
+!data/demo/.gitkeep
+!data/audio/.gitkeep
+
+# Local model weights and generated media.
+*.pt
+*.onnx
+*.engine
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.wav
+*.mp3
+*.m4a
+
+# Reports and profiling artifacts.
+*.html
+*.sqlite
+*.db

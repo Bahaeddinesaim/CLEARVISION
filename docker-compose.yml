@@ -1,0 +1,10 @@
+services:
+  classvision-ai:
+    build: .
+    container_name: classvision-ai
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
