@@ -47,7 +47,7 @@ No local CSV, images, audio files or SQLite database are required from your mach
 
 ## Important note about YOLO weights
 
-`*.pt` files are ignored to avoid committing large local model weights. If the YOLO model is not available in deployment, the app falls back to simulated detections instead of crashing.
+`*.pt` files are ignored to avoid committing large local model weights. `ultralytics` is also kept out of the default cloud requirements to make Streamlit Community Cloud build faster. If the YOLO model/package is not available in deployment, the app falls back to simulated detections instead of crashing.
 
 For a production deployment, use a model artifact strategy:
 
@@ -56,6 +56,18 @@ For a production deployment, use a model artifact strategy:
 - or configure the deployment environment to provide it
 
 Do not commit private datasets, classroom photos, audio samples, SQLite databases or secrets.
+
+## If Streamlit shows "Your app is in the oven"
+
+This usually means the app is still building or installing dependencies. If it stays there for more than a few minutes:
+
+1. Open `Manage app`.
+2. Check the build logs.
+3. Confirm the entrypoint is `app.py`.
+4. Confirm the branch is `main`.
+5. Reboot the app after pushing a lighter `requirements.txt`.
+
+This repository now uses a lightweight `requirements.txt` for cloud deployment and `requirements-local-optional.txt` for heavier local-only packages.
 
 ## GitHub Pages
 
