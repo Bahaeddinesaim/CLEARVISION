@@ -21,11 +21,13 @@ from app.ui.components import anomaly_cards, card, detected_objects_panel, healt
 from app.ui.styles import DARK_CSS, PREMIUM_CSS
 from app.utils.io import prepend_csv, safe_read_csv
 from app.vision.detector import detect_objects
+from app.weather.prediction import current_summary, daily_dataframe, fetch_kremlin_bicetre_forecast, hourly_dataframe, prediction_targets
 
 PAGES = [
     "Executive Dashboard",
     "Detection Studio",
     "Audio Noise Detection",
+    "Prediction Meteo",
     "Inventory Analytics",
     "Anomaly Center",
     "Governance Center",
@@ -100,6 +102,12 @@ def audio_mime(filename: str) -> str:
         ".flac": "audio/flac",
         ".wav": "audio/wav",
     }.get(suffix, "audio/wav")
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def cached_weather_forecast() -> dict:
+    """Cache weather data briefly to avoid excessive Open-Meteo calls."""
+    return fetch_kremlin_bicetre_forecast()
 
 
 def register_image(analysis_id: str, image_path: Path, annotated_path: str, detections_count: int) -> pd.DataFrame:
@@ -417,6 +425,90 @@ elif page == "Audio Noise Detection":
             st.info("Pour MP3/M4A/OGG/FLAC, installe les dependances du requirements.txt afin d'activer le decodeur ffmpeg.")
     else:
         card("Comment l'utiliser", "Importe un fichier audio ou enregistre 5 a 30 secondes avec le micro. L'app estime si le bruit ambiant est faible, moyen ou eleve.")
+
+elif page == "Prediction Meteo":
+    section("Prediction Meteo", "Decision climatique pour Le Kremlin-Bicetre: climatisation, chauffage, rien et alertes hydratation.")
+    st.caption("Source: Open-Meteo, previsions horaires et journalieres sur 7 jours.")
+    refresh_col, info_col = st.columns([0.22, 0.78])
+    with refresh_col:
+        if st.button("Actualiser meteo"):
+            cached_weather_forecast.clear()
+            st.rerun()
+    with info_col:
+        st.caption("Les donnees sont mises en cache 15 minutes pour garder l'app fluide.")
+
+    try:
+        weather_payload = cached_weather_forecast()
+        current_weather = current_summary(weather_payload)
+        hourly_weather = hourly_dataframe(weather_payload)
+        daily_weather = daily_dataframe(weather_payload)
+        targets = prediction_targets(hourly_weather, daily_weather)
+
+        p1, p2, p3, p4 = st.columns(4)
+        with p1:
+            kpi("Temperature", f"{current_weather.get('temperature_2m', 0):.1f} C", current_weather["weather_label"], "T")
+        with p2:
+            kpi("Ressenti", f"{current_weather.get('apparent_temperature', 0):.1f} C", "temperature percue", "R")
+        with p3:
+            kpi("Decision", current_weather["hvac_action"], current_weather["hvac_detail"], "C")
+        with p4:
+            kpi("Hydratation", current_weather["hydration_level"], current_weather["hydration_message"], "H")
+
+        if not targets.empty:
+            section("Alertes par horizon", "Actions recommandees pour H+1, H+5, J+1 et J+7.")
+            cols = st.columns(len(targets))
+            for col, (_, row) in zip(cols, targets.iterrows()):
+                with col:
+                    temp = row.get("apparent_temperature", row.get("apparent_temperature_max", 0))
+                    label = pd.to_datetime(row.get("time")).strftime("%d/%m %H:%M")
+                    kpi(str(row.get("horizon", "")), str(row.get("hvac_action", "Rien")), f"{temp:.1f} C ressenti - {label}", "!")
+                    st.caption(str(row.get("hydration_message", "")))
+
+        chart_df = hourly_weather.head(24 * 7).copy()
+        if not chart_df.empty:
+            chart_df["time_label"] = chart_df["time"].dt.strftime("%d/%m %H:%M")
+            fig = px.line(
+                chart_df,
+                x="time",
+                y=["temperature_2m", "apparent_temperature"],
+                title="Prevision horaire temperature vs ressenti",
+                labels={"value": "C", "time": "Heure", "variable": "Mesure"},
+            )
+            fig.update_layout(height=360, margin=dict(t=55, b=20, l=20, r=20))
+            st.plotly_chart(fig, use_container_width=True)
+
+        daily_display = daily_weather.copy()
+        if not daily_display.empty:
+            daily_display["date"] = daily_display["time"].dt.strftime("%d/%m/%Y")
+            section("Synthese J+1 a J+7")
+            st.dataframe(
+                daily_display[
+                    [
+                        "date",
+                        "temperature_2m_min",
+                        "temperature_2m_max",
+                        "apparent_temperature_max",
+                        "precipitation_sum",
+                        "weather_label",
+                        "hvac_action",
+                        "hydration_level",
+                        "hydration_message",
+                    ]
+                ],
+                use_container_width=True,
+            )
+
+        if not hourly_weather.empty:
+            detailed = hourly_weather.head(24 * 7).copy()
+            detailed["time"] = detailed["time"].dt.strftime("%d/%m/%Y %H:%M")
+            st.download_button(
+                "Telecharger forecast_kremlin_bicetre.csv",
+                detailed.to_csv(index=False).encode("utf-8"),
+                "forecast_kremlin_bicetre.csv",
+            )
+    except Exception as exc:
+        st.error(f"Prediction meteo indisponible: {exc}")
+        st.info("Verifie la connexion internet du serveur Streamlit. Open-Meteo ne demande pas de cle API.")
 
 elif page == "Inventory Analytics":
     section("Inventory Analytics", "Comptage, conformite et ecarts par objet.")
