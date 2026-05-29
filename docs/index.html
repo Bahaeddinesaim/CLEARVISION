@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClearVision AI</title>
+  <meta name="description" content="ClearVision AI - classroom computer vision, audio noise detection, data governance and analytics.">
+  <style>
+    :root{
+      --bg:#eef3fb;--panel:rgba(255,255,255,.86);--ink:#101828;--muted:#667085;--line:rgba(16,24,40,.10);
+      --blue:#4f8ef7;--green:#12b76a;--violet:#7c5ff5;--amber:#f79009;--red:#f04438;
+      --shadow:0 24px 80px rgba(16,24,40,.12);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 10% 0%,rgba(79,142,247,.22),transparent 30%),radial-gradient(circle at 92% 18%,rgba(18,183,106,.18),transparent 28%),var(--bg);color:var(--ink)}
+    body.dark{--bg:#0a0c10;--panel:rgba(15,18,24,.88);--ink:#e8eaf0;--muted:#8b92a5;--line:rgba(255,255,255,.10);--shadow:none}
+    .wrap{width:min(1160px,calc(100% - 32px));margin:0 auto;padding:28px 0 56px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:900}
+    .mark{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,var(--blue),var(--green));display:grid;place-items:center;color:white}
+    button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer}
+    .hero{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:28px;padding:34px;background:linear-gradient(135deg,#0a0c10,#161b24 48%,#4f8ef7);color:white;box-shadow:var(--shadow)}
+    .hero:after{content:"";position:absolute;right:-100px;bottom:-130px;width:360px;height:360px;border-radius:999px;background:radial-gradient(circle,rgba(18,183,106,.35),transparent 60%)}
+    .hero>*{position:relative;z-index:1}
+    .pill{display:inline-flex;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.12);padding:8px 12px;border-radius:999px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#b8d8ff}
+    h1{font-size:clamp(38px,7vw,84px);line-height:.95;letter-spacing:-.04em;margin:18px 0 12px;max-width:860px}
+    .lead{font-size:17px;line-height:1.6;color:rgba(255,255,255,.78);max-width:780px;margin:0 0 24px}
+    .actions{display:flex;flex-wrap:wrap;gap:12px}
+    .cta{display:inline-flex;text-decoration:none;border-radius:14px;padding:13px 16px;font-weight:900}
+    .primary{background:white;color:#101828}.secondary{background:rgba(255,255,255,.10);color:white;border:1px solid rgba(255,255,255,.18)}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:var(--shadow);backdrop-filter:blur(18px)}
+    .card b{display:block;font-size:15px;margin-bottom:7px}.card p{margin:0;color:var(--muted);line-height:1.5;font-size:14px}
+    .nav{display:flex;gap:12px;overflow-x:auto;padding:18px 2px 10px;margin-top:8px}
+    .nav-card{min-width:210px;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px;text-decoration:none;color:var(--ink);box-shadow:var(--shadow)}
+    .num{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:11px;background:rgba(79,142,247,.13);color:var(--blue);font-weight:900;font-size:12px}
+    .nav-card strong{display:block;margin-top:18px}.nav-card small{display:block;color:var(--muted);margin-top:6px;line-height:1.35}
+    .note{margin-top:20px;color:var(--muted);font-size:13px;line-height:1.55}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}.hero{padding:24px}.top{align-items:flex-start}.actions{display:grid}.cta{justify-content:center}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div class="brand"><div class="mark">CV</div><span>ClearVision AI</span></div>
+      <button onclick="document.body.classList.toggle('dark')">Light / Dark</button>
+    </div>
+
+    <section class="hero">
+      <div class="pill">Computer Vision · Signal Processing · Data Governance</div>
+      <h1>Classroom intelligence for vision, audio and analytics.</h1>
+      <p class="lead">ClearVision AI analyzes classroom photos, detects anomalies per image, evaluates classroom health, monitors audio noise and keeps local data governance ready for portfolio demos.</p>
+      <div class="actions">
+        <a class="cta primary" href="https://github.com/Bahaeddinesaim/CLEARVISION">Open GitHub Repository</a>
+        <a class="cta secondary" href="#run">Run locally</a>
+      </div>
+    </section>
+
+    <div class="nav" aria-label="Feature navigation">
+      <a class="nav-card" href="#vision"><span class="num">01</span><strong>Detection Studio</strong><small>Photo upload and classroom object detection.</small></a>
+      <a class="nav-card" href="#audio"><span class="num">02</span><strong>Audio Noise Detection</strong><small>WAV signal analysis and noise scoring.</small></a>
+      <a class="nav-card" href="#governance"><span class="num">03</span><strong>Governance</strong><small>RAW, BRONZE, SILVER and GOLD datasets.</small></a>
+      <a class="nav-card" href="#privacy"><span class="num">04</span><strong>Privacy</strong><small>Local data is ignored by Git.</small></a>
+    </div>
+
+    <section class="grid">
+      <article class="card" id="vision"><b>Photo-scoped anomalies</b><p>Anomalies are computed from the latest photo only, while historical files stay local for analysis.</p></article>
+      <article class="card" id="audio"><b>Audio signal processing</b><p>Noise score, RMS dBFS, peak dBFS, zero-crossing rate, high-frequency ratio and spectral centroid.</p></article>
+      <article class="card" id="governance"><b>Deploy-ready structure</b><p>Streamlit app for local/cloud execution, plus this static GitHub Pages showcase.</p></article>
+    </section>
+
+    <section class="card" id="run" style="margin-top:16px">
+      <b>Run the interactive app locally</b>
+      <p><code>streamlit run app.py --server.address 0.0.0.0 --server.port 8502</code></p>
+      <p>Then open <code>http://10.68.247.21:8502</code> from another device on the same network.</p>
+    </section>
+
+    <p class="note" id="privacy">GitHub Pages is static. The real Streamlit app needs a Python server, Streamlit Community Cloud, Docker, Render, Railway, Hugging Face Spaces or your local machine.</p>
+  </main>
+</body>
+</html>

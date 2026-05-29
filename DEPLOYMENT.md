@@ -56,3 +56,53 @@ For a production deployment, use a model artifact strategy:
 - or configure the deployment environment to provide it
 
 Do not commit private datasets, classroom photos, audio samples, SQLite databases or secrets.
+
+## GitHub Pages
+
+GitHub Pages can host only static files. It cannot run the Streamlit Python app directly.
+
+This repository includes a static showcase page in:
+
+```text
+docs/index.html
+```
+
+To publish it:
+
+1. Push the repository to GitHub.
+2. Open the GitHub repository settings.
+3. Go to `Pages`.
+4. Select `Deploy from a branch`.
+5. Choose branch `main`.
+6. Choose folder `/docs`.
+7. Save.
+
+Your static page will be available at:
+
+```text
+https://bahaeddinesaim.github.io/CLEARVISION/
+```
+
+The interactive Streamlit app must be deployed somewhere that runs Python, for example Streamlit Community Cloud, Docker on a server, Render, Railway or Hugging Face Spaces.
+
+## Local LAN URL
+
+To expose the local Streamlit app on your network:
+
+```powershell
+.\scripts\start_lan.ps1
+```
+
+Or run:
+
+```powershell
+streamlit run app.py --server.address 0.0.0.0 --server.port 8502
+```
+
+Then open:
+
+```text
+http://10.68.247.21:8502
+```
+
+This URL works only while your computer is running Streamlit and other devices are on the same network. If it does not open, allow Python/Streamlit through Windows Firewall for private networks.

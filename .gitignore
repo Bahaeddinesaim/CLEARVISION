@@ -38,5 +38,6 @@ data/**
 
 # Reports and profiling artifacts.
 *.html
+!docs/**/*.html
 *.sqlite
 *.db
